@@ -1,7 +1,9 @@
 package roman.oscar.mydigimind.ui.home
 
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +12,7 @@ import android.widget.GridView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import com.google.firebase.firestore.FirebaseFirestore
 import roman.oscar.mydigimind.R
 import roman.oscar.mydigimind.databinding.FragmentHomeBinding
 import roman.oscar.mydigimind.ui.Task
@@ -18,6 +21,8 @@ class HomeFragment : Fragment() {
 
     private var adaptador: AdaptadorTareas? = null
     private var _binding: FragmentHomeBinding? = null
+    private val db = FirebaseFirestore.getInstance()
+
     companion object {
         var tasks = ArrayList<Task>()
         var first = true
@@ -37,26 +42,55 @@ class HomeFragment : Fragment() {
 
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         val root = inflater.inflate(R.layout.fragment_home,container,false)
-        if (first==true){
-            fillTasks()
-            first = false
-        }
+
         adaptador = AdaptadorTareas(root.context, tasks)
+
         val gridView: GridView = root.findViewById(R.id.reminders)
         gridView.adapter = adaptador
 
         return root
     }
 
-    fun fillTasks(){
-        tasks.add(Task("Practice 1", arrayListOf("Monday", "Sunday"), "17:30"))
-        tasks.add(Task("Practice 2", arrayListOf("Tuesday"),"17:40"))
-        tasks.add(Task("Practice 3", arrayListOf("Wednesday"),"14:00"))
-        tasks.add(Task("Practice 4", arrayListOf("Saturday"),"11:00"))
-        tasks.add(Task("Practice 5", arrayListOf("Friday"),"13:00"))
-        tasks.add(Task("Practice 6", arrayListOf("Thursday"),"10:40"))
-        tasks.add(Task("Practice 7", arrayListOf("Monday"),"12:00"))
+    fun fillTasks() {
 
+        db.collection("actividades")
+            .get()
+            .addOnSuccessListener { result ->
+                for (document in result) {
+                    val actividad = document.getString("actividad")
+
+                    val tiempo = document.getString("tiempo")
+                    val dom = document.getBoolean("do")
+                    val lu = document.getBoolean("lu")
+                    val ma = document.getBoolean("ma")
+                    val mi = document.getBoolean("mi")
+                    val ju = document.getBoolean("ju")
+                    val vi = document.getBoolean("vi")
+                    val sa = document.getBoolean("sa")
+
+                    val days = ArrayList<String>()
+                    if (dom == true) days.add("Domingo")
+                    if (lu == true) days.add("Lunes")
+                    if (ma == true) days.add("Martes")
+                    if (mi == true) days.add("Miércoles")
+                    if (ju == true) days.add("Jueves")
+                    if (vi == true) days.add("Viernes")
+                    if (sa == true) days.add("Sábado")
+
+                    val task = Task(actividad, days, tiempo)
+                    tasks.add(task)
+                }
+                adaptador?.notifyDataSetChanged()
+            }
+            .addOnFailureListener { exception ->
+                Log.d(TAG, "Error obteniendo los registros: ", exception)
+            }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        tasks.clear()
+        fillTasks()
     }
 
     private class AdaptadorTareas: BaseAdapter{
@@ -96,4 +130,5 @@ class HomeFragment : Fragment() {
 
         }
     }
+
 }
